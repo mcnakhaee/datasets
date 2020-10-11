@@ -1,0 +1,202 @@
+---
+title: "Extract Edx Courses"
+output: html_notebook
+---
+
+
+
+This dataset contains information about 976 courses that are currently available on edx.org platform. 
+
+
+### Content
+
+
+|variable                 |class     |description |
+|:---|:---|:-----------|
+|title                 |character | Title of the course|
+|summary               |character | A summary of the course|
+|n_enrolled             |integer | Number of student that have enrolled in the courses|
+|course_type          |character | Type of course |
+|institution         |character    | The institution that created and provided the course|
+|instructors           |character | Name(s) of course instructors separated by '-'|
+|Level         |character | Difficulty level |
+|subject |character | Subject of the course |
+|language            |character | Language |
+|subtitles              |character | Available Subtitle(s)|
+|course_effort           |character | An estimate of time and effort needed to complete the course |
+|course_length        |character | length of the course in weeks|
+|price           |character |  |
+|course_description        |character | A description of the course|
+|course_syllabus        |character | course syllabus|
+|course_url        |character | course URL on edx.org|
+
+
+
+### Acknowledgements
+
+The dataset was scraped using R and the rvest library by Hadely Wickhom.
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(readxl)
+```
+
+```{r}
+links <-read_excel('edx_courses.xlsx')
+links <- links %>% 
+  filter(links !='') 
+```
+
+```{r}
+
+extract_edx <- function(course_url) {
+  Sys.sleep(5)
+  html <- read_html(course_url)
+  
+  title <- html %>%
+    html_node(xpath  = '//*[contains(concat( " ", @class, " " ), concat( " ", "mb-2", " " ))]') %>%
+    html_text()
+  summary <- html %>%
+    html_node('#course-header p') %>%
+    html_text()
+  
+  n_enrolled <- html %>%
+    html_node('#js-number-enrolled-label .font-weight-bold') %>%
+    html_text()
+  
+  instructors <- html %>%
+    html_nodes('.name') %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  
+  instructor_title <- html %>%
+    html_nodes('.name') %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  instructor_org <- html %>%
+    html_nodes('.name') %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  course_length <- html %>%
+    html_nodes(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(1) > div:nth-child(2) > span'
+    ) %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  course_effort <- html %>%
+    html_nodes(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(2) > div:nth-child(2) > span'
+    ) %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  price <- html %>%
+    html_nodes(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "m-0", " " ))]//span') %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  institution <- html %>%
+    html_nodes(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "partner", " " ))]//*[contains(concat( " ", @class, " " ), concat( " ", "link", " " ))]') %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  subject <- html %>%
+    html_nodes(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(5) > div:nth-child(2) > a'
+    ) %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  Level <-  html %>%
+    html_nodes(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(6) > div:nth-child(2)'
+    ) %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  language <- html %>%
+    html_nodes(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(7) > div:nth-child(2)'
+    ) %>%
+    html_text() %>%
+    paste0(collapse = '-')
+  
+  subtitles <- html %>%
+    html_nodes(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(8) > div:nth-child(2)'
+    ) %>%
+    html_text()  %>%
+    paste0(collapse = '-')
+  
+  course_type <- html %>%
+    html_node(
+      '#main-content > div > div > div > div.col-lg-4.order-lg-2.offset-lg-1 > div > div.row.no-gutters.updated-sidebar.mb-4 > ul > li:nth-child(9) > div:nth-child(2) > span'
+    ) %>%
+    html_text()
+  
+  
+  course_description <- html %>%
+    html_nodes('.course-description > p') %>%
+    html_text()  %>%
+    paste0(collapse = '')
+  
+  
+  course_syllabus <- html %>%
+    html_nodes(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "course-description", " " ))]//div//p') %>%
+    html_text()  %>%
+    paste0(collapse = '')
+  
+  
+  
+  data.frame(
+    course_url = course_url,
+    title = title,
+    summary = summary,
+    n_enrolled = n_enrolled,
+    course_type = course_type,
+    institution = institution,
+    instructors = instructors,
+    instructor_org = instructor_org,
+    Level = Level,
+    subject = subject,
+    language = language,
+    subtitles = subtitles,
+    course_effort = course_effort,
+    course_length = course_length,
+    price = price,
+    course_description = course_description,
+    course_syllabus = course_syllabus
+  )
+}
+
+
+```
+
+```{r}
+safe_extract_edx <- safely(extract_edx)
+
+edx_links <- links %>% 
+  pull(links)
+
+edx_courses <- safe_extract_edx(edx_links[1])$result
+for (l in edx_links) {
+  print(l)
+  edx_courses <- bind_rows(edx_courses,safe_extract_edx(l)$result)
+  
+}
+
+
+edx_courses %>% 
+  write_csv('edx_courses.csv')
+
+edx_courses %>% 
+  slice(2:976) %>% 
+  select(-course_url,everything(),course_url,-instructor_org) %>% 
+  write_csv('edx_courses.csv')
+```
+
+
